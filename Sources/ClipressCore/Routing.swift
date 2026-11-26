@@ -28,9 +28,12 @@ enum Decision: Equatable {
     case skip(String)
 }
 
+/// 결과 파일 이름 = 원본 이름 + 접미사. 이 접미사로 끝나는 파일은 다시 압축하지 않는다.
+let outputSuffix = "-pressed"
+
 /// HDR·Dolby Vision은 MVP에서 품질 검증 수단이 없어 전부 스킵한다.
 func decide(_ probe: Probe, input: URL, mode: Mode) -> Decision {
-    if input.lastPathComponent.contains(".clipress.") { return .skip("clipress 출력 파일") }
+    if input.deletingPathExtension().lastPathComponent.hasSuffix(outputSuffix) { return .skip("clipress 출력 파일") }
     let known: Set = ["video", "audio", "subtitle", "data", "attachment"]
     if probe.streams.contains(where: { !known.contains($0.codecType ?? "") }) {
         return .skip("알 수 없는 스트림 타입")
@@ -61,7 +64,8 @@ func output(for input: URL, mode: Mode) -> (Container, URL) {
     case "mov": mode == .max ? (.mp4, "mp4") : (.mov, ext)
     default: (.mkv, "mkv")
     }
-    return (container, input.deletingPathExtension().appendingPathExtension("clipress").appendingPathExtension(outputExt))
+    let name = input.deletingPathExtension().lastPathComponent + outputSuffix
+    return (container, input.deletingLastPathComponent().appending(path: name).appendingPathExtension(outputExt))
 }
 
 /// 키프레임 간격 = 10초.

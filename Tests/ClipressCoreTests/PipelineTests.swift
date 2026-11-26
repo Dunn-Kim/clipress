@@ -42,7 +42,7 @@ final class PipelineTests {
         let outcome = await compress(input, mode: .fast, tools: tools) { _ in }
         guard case .done(let before, let after, _) = outcome else { Issue.record("\(outcome)"); return }
         #expect(after < before)
-        let output = dir.appending(path: "phone.clipress.mp4")
+        let output = dir.appending(path: "phone-pressed.mp4")
         let result = try await tools.probe(output)
         #expect(result.videoStreams.first?.displaySize == [720, 1280])
         #expect(result.attachedPics == 1)
@@ -55,7 +55,7 @@ final class PipelineTests {
         let outcome = await compress(input, mode: .fast, tools: tools) { _ in }
         guard case .done(_, _, let note) = outcome else { Issue.record("\(outcome)"); return }
         #expect(note == "데이터 스트림 1개 제외")
-        #expect(FileManager.default.fileExists(atPath: dir.appending(path: "IMG_0001.clipress.MOV").path))
+        #expect(FileManager.default.fileExists(atPath: dir.appending(path: "IMG_0001-pressed.MOV").path))
     }
 
     @Test func maxModeKeepsSubtitlesInMKV() async throws {
@@ -64,9 +64,9 @@ final class PipelineTests {
         let input = try await clip("movie.mkv", size: "640x360", extra: ["-i", srt.path, "-map", "0", "-map", "1", "-map", "2", "-c:s", "srt"])
         let outcome = await compress(input, mode: .max, tools: tools) { _ in }
         guard case .done = outcome else { Issue.record("\(outcome)"); return }
-        let result = try await tools.probe(dir.appending(path: "movie.clipress.mkv"))
+        let result = try await tools.probe(dir.appending(path: "movie-pressed.mkv"))
         #expect(result.count("subtitle") == 1)
-        #expect(String(decoding: try await tools.run(tools.ffprobe, ["-v", "error", "-select_streams", "V:0", "-show_entries", "stream=codec_name", "-of", "csv=p=0", dir.appending(path: "movie.clipress.mkv").path]).out, as: UTF8.self).hasPrefix("av1"))
+        #expect(String(decoding: try await tools.run(tools.ffprobe, ["-v", "error", "-select_streams", "V:0", "-show_entries", "stream=codec_name", "-of", "csv=p=0", dir.appending(path: "movie-pressed.mkv").path]).out, as: UTF8.self).hasPrefix("av1"))
     }
 
     @Test func cancelStopsChildrenAndCleansUp() async throws {
@@ -80,7 +80,7 @@ final class PipelineTests {
         let ps = try await tools.run(URL(filePath: "/usr/bin/pgrep"), ["-f", "long-cancel-target"], check: false)
         #expect(ps.text.isEmpty, "남은 자식 프로세스: \(ps.text)")
         #expect(try leftovers().isEmpty)
-        #expect(!FileManager.default.fileExists(atPath: dir.appending(path: "long-cancel-target.clipress.mkv").path))
+        #expect(!FileManager.default.fileExists(atPath: dir.appending(path: "long-cancel-target-pressed.mkv").path))
     }
 }
 

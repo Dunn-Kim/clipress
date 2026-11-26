@@ -35,7 +35,7 @@ struct ContentView: View {
             }
 
             HStack {
-                Text("원본은 그대로 두고 옆에 이름.clipress.확장자로 저장합니다.")
+                Text("원본은 그대로 두고 옆에 이름-pressed.확장자로 저장합니다.")
                     .foregroundStyle(.secondary)
                 Spacer()
                 if queue.running == nil {

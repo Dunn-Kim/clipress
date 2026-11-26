@@ -4,7 +4,7 @@ import Testing
 
 @Test func sdrMKVIsEncodedAsMKV() throws {
     #expect(decide(try fixture("sdr_mkv"), input: mkv, mode: .max) == .encode(Job(
-        videoIndex: 0, container: .mkv, output: URL(filePath: "/v/movie.clipress.mkv"), gop: 300, dataStreams: 0
+        videoIndex: 0, container: .mkv, output: URL(filePath: "/v/movie-pressed.mkv"), gop: 300, dataStreams: 0
     )))
 }
 
@@ -23,15 +23,15 @@ import Testing
 @Test func movKeepsMOVForHEVCButAV1GoesToMP4() throws {
     let probe = try fixture("tmcd_mov")
     #expect(decide(probe, input: mov, mode: .fast) == .encode(Job(
-        videoIndex: 0, container: .mov, output: URL(filePath: "/v/IMG_0001.clipress.MOV"), gop: 300, dataStreams: 1
+        videoIndex: 0, container: .mov, output: URL(filePath: "/v/IMG_0001-pressed.MOV"), gop: 300, dataStreams: 1
     )))
     guard case .encode(let job) = decide(probe, input: mov, mode: .max) else { Issue.record(); return }
     #expect(job.container == .mp4)
-    #expect(job.output.lastPathComponent == "IMG_0001.clipress.mp4")
+    #expect(job.output.lastPathComponent == "IMG_0001-pressed.mp4")
 }
 
 @Test func clipressOutputsAreSkipped() throws {
-    #expect(decide(try fixture("sdr_mkv"), input: URL(filePath: "/v/movie.clipress.mkv"), mode: .max)
+    #expect(decide(try fixture("sdr_mkv"), input: URL(filePath: "/v/movie-pressed.mkv"), mode: .max)
         == .skip("clipress 출력 파일"))
 }
 
@@ -40,9 +40,9 @@ import Testing
         let (container, url) = output(for: URL(filePath: path), mode: mode)
         return "\(container.muxer) \(url.lastPathComponent)"
     }
-    #expect(name("/v/movie.mkv") == "matroska movie.clipress.mkv")
-    #expect(name("/v/a.webm") == "matroska a.clipress.mkv")
-    #expect(name("/v/a.m4v") == "mp4 a.clipress.m4v")
-    #expect(name("/v/IMG_0001.MOV") == "mov IMG_0001.clipress.MOV")
-    #expect(name("/v/IMG_0001.MOV", .max) == "mp4 IMG_0001.clipress.mp4")
+    #expect(name("/v/movie.mkv") == "matroska movie-pressed.mkv")
+    #expect(name("/v/a.webm") == "matroska a-pressed.mkv")
+    #expect(name("/v/a.m4v") == "mp4 a-pressed.m4v")
+    #expect(name("/v/IMG_0001.MOV") == "mov IMG_0001-pressed.MOV")
+    #expect(name("/v/IMG_0001.MOV", .max) == "mp4 IMG_0001-pressed.mp4")
 }
