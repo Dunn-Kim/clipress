@@ -3,6 +3,7 @@ import SwiftUI
 
 struct ContentView: View {
     @State private var queue = Queue()
+    @State private var showLossNote = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -16,11 +17,20 @@ struct ContentView: View {
                 }
                 .pickerStyle(.segmented)
                 .disabled(queue.running != nil)
-                Image(systemName: "exclamationmark.circle")
-                    .foregroundStyle(.orange)
-                    .help(queue.mode.lossNote)
-                    .accessibilityLabel("변환 손실 안내")
-                    .accessibilityHint(queue.mode.lossNote)
+                // .help() 툴팁은 이 앱에서 표시되지 않아(실사용 확인) 마우스를 올리거나 누르면 팝오버로 보여 준다.
+                Button { showLossNote.toggle() } label: {
+                    Image(systemName: "exclamationmark.circle").foregroundStyle(.orange)
+                }
+                .buttonStyle(.plain)
+                .onHover { showLossNote = $0 }
+                .popover(isPresented: $showLossNote, arrowEdge: .bottom) {
+                    Text(queue.mode.lossNote)
+                        .font(.system(size: 14))
+                        .frame(width: 380, alignment: .leading)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .padding()
+                }
+                .accessibilityLabel("변환 손실 안내")
             }
 
             List(queue.items) { ItemRow(item: $0) }
@@ -59,12 +69,16 @@ private struct ItemRow: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 6) {
-            HStack {
+            HStack(alignment: .firstTextBaseline) {
                 Text(item.url.lastPathComponent).lineLimit(1).truncationMode(.middle)
                 Spacer()
-                Text(status).foregroundStyle(.secondary).lineLimit(1)
+                // 툴팁 대신 두 줄까지 보여 줘서 긴 실패 메시지도 읽을 수 있게 한다.
+                Text(status)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(2)
+                    .multilineTextAlignment(.trailing)
+                    .frame(maxWidth: 360, alignment: .trailing)
             }
-            .help(status)  // 한 줄에서 잘린 실패 메시지 전체를 본다.
 
             if let stage = item.stage {
                 HStack(spacing: 10) {
