@@ -7,14 +7,17 @@ swift build -c release --product Clipress
 
 app=Clipress.app
 rm -rf "$app"
-mkdir -p "$app/Contents/MacOS"
+mkdir -p "$app/Contents/MacOS" "$app/Contents/Resources"
 cp "$(swift build -c release --show-bin-path)/Clipress" "$app/Contents/MacOS/"
+# 아이콘을 바꾸려면 scripts/make-icon.swift를 고치고 `swift scripts/make-icon.swift`로 다시 만든다.
+cp assets/AppIcon.icns "$app/Contents/Resources/"
 cat > "$app/Contents/Info.plist" <<'EOF'
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <plist version="1.0">
 <dict>
     <key>CFBundleExecutable</key><string>Clipress</string>
+    <key>CFBundleIconFile</key><string>AppIcon</string>
     <key>CFBundleIdentifier</key><string>local.clipress</string>
     <key>CFBundleName</key><string>Clipress</string>
     <key>CFBundlePackageType</key><string>APPL</string>
