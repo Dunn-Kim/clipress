@@ -1,9 +1,15 @@
 import ClipressCore
 import SwiftUI
+import UniformTypeIdentifiers
+
+/// 파일 선택 창에서 고를 수 있는 형식. 실제 처리 여부는 ffprobe 분석이 정한다.
+private let videoTypes: [UTType] = [.movie, .video, .avi, .mpeg2TransportStream]
+    + ["mkv", "webm", "flv", "wmv"].compactMap { UTType(filenameExtension: $0) }
 
 struct ContentView: View {
     @State private var queue = Queue()
     @State private var showLossNote = false
+    @State private var importing = false
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -33,10 +39,22 @@ struct ContentView: View {
                 .accessibilityLabel("변환 손실 안내")
             }
 
+            if !queue.items.isEmpty {
+                HStack(spacing: 10) {
+                    Text("대기 \(queue.pendingCount) · 완료 \(queue.finishedCount)/\(queue.items.count)")
+                        .foregroundStyle(.secondary)
+                        .monospacedDigit()
+                        .fixedSize()
+                    if queue.running != nil {
+                        ProgressView(value: queue.overallFraction)
+                    }
+                }
+            }
+
             List(queue.items) { ItemRow(item: $0) }
                 .overlay {
                     if queue.items.isEmpty {
-                        Text("영상 파일을 여기에 끌어다 놓으세요").foregroundStyle(.secondary)
+                        Text("영상 파일을 끌어다 놓거나 \"파일 추가…\"로 여러 개를 고르세요").foregroundStyle(.secondary)
                     }
                 }
                 .dropDestination(for: URL.self) { urls, _ in
@@ -48,6 +66,8 @@ struct ContentView: View {
                 Text("원본은 그대로 두고 옆에 이름-pressed.확장자로 저장합니다.")
                     .foregroundStyle(.secondary)
                 Spacer()
+                Button("파일 추가…") { importing = true }
+                    .keyboardShortcut("o")
                 if queue.running == nil {
                     Button("시작") { queue.start() }
                         .keyboardShortcut(.defaultAction)
@@ -59,7 +79,10 @@ struct ContentView: View {
         }
         .font(.system(size: 14))  // 한글 본문 가독성
         .padding()
-        .frame(minWidth: 600, minHeight: 380)
+        .frame(minWidth: 640, minHeight: 400)
+        .fileImporter(isPresented: $importing, allowedContentTypes: videoTypes, allowsMultipleSelection: true) { result in
+            if case .success(let urls) = result { queue.add(urls) }
+        }
         .task { queue.toolProblem = await queue.tools.problem() }
     }
 }

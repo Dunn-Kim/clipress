@@ -21,6 +21,18 @@ final class Queue {
     var running: Task<Void, Never>?
     let tools = Tools()
 
+    var pendingCount: Int { items.count(where: \.pending) }
+    var finishedCount: Int { items.count { $0.summary != nil } }
+
+    /// (끝난 파일 수 + 지금 인코딩 중인 파일의 진행률) ÷ 전체 파일 수.
+    var overallFraction: Double {
+        guard !items.isEmpty else { return 0 }
+        let current = items.lazy.compactMap { item -> Double? in
+            if case .encoding(let progress) = item.stage { progress.fraction } else { nil }
+        }.first ?? 0
+        return (Double(finishedCount) + current) / Double(items.count)
+    }
+
     /// 대기 중인 항목만 중복으로 본다. 끝난(취소·실패 포함) 파일은 다시 넣어 재시도할 수 있다.
     func add(_ urls: [URL]) {
         items += urls.filter { url in !items.contains { $0.pending && $0.url == url } }.map { Item(url: $0) }
