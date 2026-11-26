@@ -1,4 +1,5 @@
 import Foundation
+import Synchronization
 import Testing
 @testable import ClipressCore
 
@@ -39,9 +40,16 @@ final class PipelineTests {
         let date = Date(timeIntervalSince1970: 1_600_000_000)
         try FileManager.default.setAttributes([.modificationDate: date], ofItemAtPath: input.path)
 
-        let outcome = await compress(input, mode: .fast, tools: tools) { _ in }
+        let stages = Mutex<[Stage]>([])
+        let outcome = await compress(input, mode: .fast, tools: tools) { stage in stages.withLock { $0.append(stage) } }
         guard case .done(let before, let after, _) = outcome else { Issue.record("\(outcome)"); return }
         #expect(after < before)
+        // 진행률 막대와 속도계가 쓰는 값이 실제 인코딩에서 보고된다.
+        let reported = stages.withLock { $0 }
+        #expect(reported.first == .analyzing && reported.last == .verifying)
+        let encoding = reported.compactMap { if case .encoding(let p) = $0 { p } else { nil } }
+        #expect((encoding.last?.fraction ?? 0) > 0.9)
+        #expect(encoding.contains { $0.fps != nil && $0.speed != nil && $0.eta != nil })
         let output = dir.appending(path: "phone-pressed.mp4")
         let result = try await tools.probe(output)
         #expect(result.videoStreams.first?.displaySize == [720, 1280])

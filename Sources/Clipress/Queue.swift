@@ -9,7 +9,10 @@ final class Queue {
         let id = UUID()
         let url: URL
         var pending = true
-        var status = "대기"
+        /// 처리 중일 때의 단계. 끝나면 nil.
+        var stage: Stage?
+        /// 끝난 뒤의 결과 요약.
+        var summary: String?
     }
 
     var items: [Item] = []
@@ -36,19 +39,22 @@ final class Queue {
             while !Task.isCancelled, let index = items.firstIndex(where: \.pending) {
                 items[index].pending = false
                 let id = items[index].id
-                let outcome = await compress(items[index].url, mode: mode, tools: tools) { status in
-                    DispatchQueue.main.async { MainActor.assumeIsolated { self.setStatus(id, status) } }
+                let outcome = await compress(items[index].url, mode: mode, tools: tools) { stage in
+                    DispatchQueue.main.async { MainActor.assumeIsolated { self.update(id) { $0.stage = stage } } }
                 }
-                setStatus(id, outcome.summary)
+                update(id) {
+                    $0.stage = nil
+                    $0.summary = outcome.summary
+                }
             }
         }
     }
 
     func cancel() { running?.cancel() }
 
-    private func setStatus(_ id: UUID, _ status: String) {
+    private func update(_ id: UUID, _ change: (inout Item) -> Void) {
         guard let index = items.firstIndex(where: { $0.id == id }) else { return }
-        items[index].status = status
+        change(&items[index])
     }
 }
 

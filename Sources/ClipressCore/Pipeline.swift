@@ -6,10 +6,29 @@ public enum Outcome: Sendable, Equatable {
     case failed(String)
 }
 
+/// 처리 중인 단계. 인코딩 단계만 진행률과 속도를 안다.
+public enum Stage: Sendable, Equatable {
+    case analyzing
+    case searching
+    case encoding(EncodeProgress)
+    case verifying
+}
+
+public struct EncodeProgress: Sendable, Equatable {
+    /// 0...1
+    public var fraction: Double = 0
+    /// 초당 인코딩 프레임 수.
+    public var fps: Double?
+    /// 재생 속도 대비 배속 (2.0 = 실시간의 2배).
+    public var speed: Double?
+    /// 인코딩이 끝날 때까지 남은 시간(초). 배속을 알아야 계산된다.
+    public var eta: Double?
+}
+
 /// 파일 하나를 분석 → 품질 탐색 → 인코딩 → 검증 → 이름 변경 순서로 처리한다. 원본은 건드리지 않는다.
 /// 단계 순서만 다루고, 판단은 Routing·Verification에, 도구 호출은 Tools에 맡긴다.
 public func compress(
-    _ input: URL, mode: Mode, tools: Tools, status: @escaping @Sendable (String) -> Void
+    _ input: URL, mode: Mode, tools: Tools, status: @escaping @Sendable (Stage) -> Void
 ) async -> Outcome {
     let fm = FileManager.default
     let temp = fm.temporaryDirectory.appending(path: "clipress-\(UUID().uuidString)")
@@ -20,7 +39,7 @@ public func compress(
         if let part { try? fm.removeItem(at: part) }
     }
     do {
-        status("분석 중")
+        status(.analyzing)
         let probe = try await tools.probe(input)
         let job: Job
         switch decide(probe, input: input, mode: mode) {
@@ -35,7 +54,7 @@ public func compress(
         if free < fileSize { return .failed("디스크 공간 부족") }
         let video = try await tools.videoPackets(input, stream: job.videoIndex)
 
-        status("품질 탐색 중")
+        status(.searching)
         try fm.createDirectory(at: temp, withIntermediateDirectories: true)
         let quality: Double, videoPercent: Double
         switch try await tools.search(input, mode: mode, gop: job.gop, tempDir: temp) {
@@ -49,14 +68,11 @@ public func compress(
 
         let partURL = job.output.appendingPathExtension("part")
         part = partURL
-        let duration = probe.duration ?? 0
-        status("인코딩 0%")
-        try await tools.encode(encodeArgs(input: input, output: partURL, job: job, mode: mode, quality: quality)) { seconds in
-            guard duration > 0 else { return }
-            status("인코딩 \(Int(min(seconds / duration, 1) * 100))%")
-        }
+        status(.encoding(EncodeProgress()))
+        try await tools.encode(encodeArgs(input: input, output: partURL, job: job, mode: mode, quality: quality),
+                               duration: probe.duration ?? 0) { status(.encoding($0)) }
 
-        status("검증 중")
+        status(.verifying)
         try await tools.checkDecodes(partURL)
         let result = try await tools.probe(partURL)
         let resultPackets = try await tools.videoPackets(partURL, stream: result.videoStreams.first?.index ?? 0)

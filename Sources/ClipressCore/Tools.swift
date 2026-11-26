@@ -43,18 +43,42 @@ public struct Tools: Sendable {
         return parsed
     }
 
-    /// `-progress`로 받은 인코딩 위치(초)를 `progress`에 넘긴다.
-    func encode(_ args: [String], progress: @escaping (Double) -> Void) async throws {
+    /// `-progress` 블록(약 0.5초마다)이 끝날 때마다 진행률·속도를 `progress`에 넘긴다.
+    func encode(_ args: [String], duration: Double, progress: @escaping (EncodeProgress) -> Void) async throws {
         let global = ["-nostdin", "-y", "-hide_banner", "-v", "error", "-progress", "pipe:1", "-nostats"]
+        var current = EncodeProgress()
         try await run(ffmpeg, global + args) { line in
-            guard line.hasPrefix("out_time_us="), let us = Double(line.dropFirst(12)) else { return }
-            progress(us / 1_000_000)
+            if current.apply(line, duration: duration) { progress(current) }
         }
     }
 
     /// 비디오 전체를 디코드한다. -xerror: 디코드 오류가 하나라도 있으면 실패한다.
     func checkDecodes(_ url: URL) async throws {
         try await run(ffmpeg, ["-nostdin", "-v", "error", "-xerror", "-i", url.path, "-map", "0:V:0", "-f", "null", "-"])
+    }
+}
+
+extension EncodeProgress {
+    /// ffmpeg `-progress` 출력 한 줄(key=value)을 반영한다. 블록 끝(`progress=`)이면 true.
+    mutating func apply(_ line: String, duration: Double) -> Bool {
+        let parts = line.split(separator: "=", maxSplits: 1)
+        guard parts.count == 2 else { return false }
+        let value = parts[1].trimmingCharacters(in: .whitespaces)
+        switch parts[0] {
+        case "out_time_us":
+            if duration > 0, let us = Double(value) { fraction = min(max(us / 1_000_000 / duration, 0), 1) }
+        case "fps":
+            fps = Double(value)
+        case "speed":
+            speed = Double(value.dropLast())  // "2.35x". 아직 모르면 "N/A" → nil
+        case "progress":
+            // 남은 재생 길이 ÷ 배속
+            if duration > 0, let speed, speed > 0 { eta = duration * (1 - fraction) / speed }
+            return true
+        default:
+            break
+        }
+        return false
     }
 }
 

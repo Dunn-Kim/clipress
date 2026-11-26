@@ -12,6 +12,32 @@ import Testing
     #expect(text.hasSuffix("199999\n200000\n"))
 }
 
+@Test func parsesFFmpegProgressBlocks() {
+    // ffmpeg -progress 출력: speed는 %4.3gx 형식이라 앞에 공백이 올 수 있고, 처음에는 N/A다.
+    let lines = """
+        frame=0
+        fps=0.00
+        out_time_us=N/A
+        speed=N/A
+        progress=continue
+        frame=240
+        fps=142.50
+        out_time_us=5000000
+        speed=   5.9x
+        progress=continue
+        out_time_us=12000000
+        progress=end
+        """.split(separator: "\n").map(String.init)
+    var progress = EncodeProgress()
+    var blocks: [EncodeProgress] = []
+    for line in lines where progress.apply(line, duration: 10) { blocks.append(progress) }
+    #expect(blocks.count == 3)
+    #expect(blocks[0].fraction == 0 && blocks[0].speed == nil && blocks[0].eta == nil)
+    // 남은 재생 5초 ÷ 5.9배속
+    #expect(blocks[1] == EncodeProgress(fraction: 0.5, fps: 142.5, speed: 5.9, eta: 5 / 5.9))
+    #expect(blocks[2].fraction == 1 && blocks[2].eta == 0)  // 길이보다 큰 위치는 1로 자른다
+}
+
 @Test func runReportsFailureWithLastErrorLine() async throws {
     await #expect(throws: ToolError.self) {
         try await Tools().run(URL(filePath: "/bin/sh"), ["-c", "echo boom >&2; exit 3"])
