@@ -43,3 +43,9 @@ SwiftUI 매크로 플러그인이 Command Line Tools에 없어서 Xcode 툴체�
 - MOV 입력의 커버 아트는 ffmpeg mov muxer가 쓰지 못해 검증에서 실패하고 원본이 유지된다.
 
 조사 근거: `reports/시각적 무손실 영상 압축 기술.md`
+
+## 라이선스
+
+[MIT](LICENSE). 저작권 표시와 라이선스 문구만 남기면 상업적 사용·수정·재배포 모두 자유롭다.
+
+clipress는 ffmpeg·ab-av1을 포함하지 않고, 사용자가 설치한 실행 파일을 호출만 한다. 각 도구는 자기 라이선스를 따른다: ab-av1은 MIT, ffmpeg는 빌드 구성에 따라 LGPL 또는 GPL(Homebrew 빌드는 `--enable-gpl --enable-version3`이라 GPLv3). ffmpeg를 앱 안에 넣어 배포하려면 그 라이선스 의무를 따로 지켜야 한다.
