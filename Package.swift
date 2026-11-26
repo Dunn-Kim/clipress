@@ -7,6 +7,7 @@ let package = Package(
     platforms: [.macOS("27.0")],
     targets: [
         .target(name: "ClipressCore"),
+        .executableTarget(name: "Clipress", dependencies: ["ClipressCore"]),
         .testTarget(
             name: "ClipressCoreTests",
             dependencies: ["ClipressCore"],
