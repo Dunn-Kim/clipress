@@ -9,12 +9,19 @@ struct ContentView: View {
             if let problem = queue.toolProblem {
                 Text(problem).foregroundStyle(.red)
             }
-            Picker("모드", selection: $queue.mode) {
-                Text("빠름 (HEVC 하드웨어)").tag(Mode.fast)
-                Text("고압축 (AV1)").tag(Mode.max)
+            HStack {
+                Picker("모드", selection: $queue.mode) {
+                    Text("빠름 (HEVC 하드웨어)").tag(Mode.fast)
+                    Text("고압축 (AV1)").tag(Mode.max)
+                }
+                .pickerStyle(.segmented)
+                .disabled(queue.running != nil)
+                Image(systemName: "exclamationmark.circle")
+                    .foregroundStyle(.orange)
+                    .help(queue.mode.lossNote)
+                    .accessibilityLabel("변환 손실 안내")
+                    .accessibilityHint(queue.mode.lossNote)
             }
-            .pickerStyle(.segmented)
-            .disabled(queue.running != nil)
 
             List(queue.items) { ItemRow(item: $0) }
                 .overlay {
@@ -107,5 +114,28 @@ private struct SpeedMeter: View {
     private func remaining(_ seconds: Double) -> String {
         let duration = Duration.seconds(seconds.rounded())
         return duration.formatted(.time(pattern: seconds >= 3600 ? .hourMinuteSecond : .minuteSecond))
+    }
+}
+
+private extension Mode {
+    /// 변환으로 생기는 손실. 두 모드 공통: 손실 압축 재인코딩이며 목표는 샘플 평균 VMAF 96이다.
+    var lossNote: String {
+        switch self {
+        case .fast:
+            """
+            HEVC 하드웨어(VideoToolbox) 변환 시 손실
+            • 손실 압축 재인코딩: 목표 VMAF 96(샘플 평균)이라 대부분 구분하기 어렵지만, 어두운 장면의 밴딩, 필름 입자·미세한 질감이 뭉개질 수 있습니다.
+            • 하드웨어 인코더는 같은 화질에서 소프트웨어보다 파일이 커서, 이미 효율적인 원본은 절감 부족으로 건너뜁니다.
+            • 타임코드 등 데이터 스트림은 빠집니다. 오디오·자막·챕터·커버 아트는 그대로입니다.
+            """
+        case .max:
+            """
+            AV1(SVT-AV1) 변환 시 손실
+            • 손실 압축 재인코딩: 목표 VMAF 96(샘플 평균). AV1은 필름 입자·노이즈를 매끄럽게 만들고 어두운 영역의 디테일을 줄이는 경향이 있습니다.
+            • 매우 느립니다. 4K 영화는 몇 시간 걸릴 수 있습니다.
+            • M3 이전 Mac과 구형 기기는 AV1 하드웨어 재생을 못 해 QuickTime에서 열리지 않을 수 있습니다.
+            • MOV 원본은 MP4로 저장되고, 타임코드 등 데이터 스트림은 빠집니다.
+            """
+        }
     }
 }
