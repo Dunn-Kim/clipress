@@ -18,7 +18,7 @@ func searchArgs(input: URL, mode: Mode, gop: Int, tempDir: URL) -> [String] {
     var args = [
         "crf-search", "-i", input.path,
         "--min-vmaf", minVMAF,
-        // 비디오 스트림이 이 비율을 넘으면 파일 전체도 기준을 넘는다. ab-av1 기본값(80)에 기대지 않고 같은 상수를 넘긴다.
+        // 비디오 스트림이 이 비율을 넘으면 파일 전체도 기준을 넘는다. ab-av1 기본값은 80이라 같은 상수를 넘겨야 한다.
         "--max-encoded-percent", "\(Int(maxSizeRatio * 100))",
         "--sample-every", "12m",
         "--crf-increment", "1",

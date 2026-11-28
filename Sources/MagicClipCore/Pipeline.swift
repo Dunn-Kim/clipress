@@ -51,7 +51,7 @@ public func compress(
         let free = try input.deletingLastPathComponent()
             .resourceValues(forKeys: [.volumeAvailableCapacityForImportantUsageKey])
             .volumeAvailableCapacityForImportantUsage ?? 0
-        // 결과가 원본의 80%를 넘으면 어차피 버리므로 그만큼만 있으면 된다.
+        // 결과가 원본의 85%를 넘으면 어차피 버리므로 그만큼만 있으면 된다.
         if Double(free) < Double(fileSize) * maxSizeRatio { return .failed("디스크 공간 부족") }
         // 원본 전체를 읽는 패킷 집계는 품질 탐색과 겹쳐 돌린다. 먼저 반환하면 자동으로 취소된다.
         async let packets = tools.videoPackets(input, stream: job.videoIndex)

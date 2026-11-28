@@ -15,10 +15,10 @@ import Testing
 }
 
 @Test func sizeGateUsesWholeFile() {
-    // 40 GB 리먹스, 비디오 25 GB, 비디오 예측 76% → 파일 34 GB(85%)라 인코딩하지 않는다.
+    // 40 GB 리먹스, 비디오 25 GB, 비디오 예측 87.5% → 파일 36.875 GB(92%)라 인코딩하지 않는다.
     let gb: Int64 = 1_000_000_000
-    let predicted = predictedFileSize(fileSize: 40 * gb, videoBytes: 25 * gb, videoPercent: 76)
-    #expect(predicted == 34 * gb)
+    let predicted = predictedFileSize(fileSize: 40 * gb, videoBytes: 25 * gb, videoPercent: 87.5)
+    #expect(predicted == 36_875_000_000)
     #expect(!passesSizeGate(predicted, original: 40 * gb))
-    #expect(passesSizeGate(32 * gb, original: 40 * gb))
+    #expect(passesSizeGate(34 * gb, original: 40 * gb))  // 정확히 85%
 }
