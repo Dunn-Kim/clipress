@@ -33,7 +33,7 @@ let outputSuffix = "-pressed"
 
 /// HDR·Dolby Vision은 MVP에서 품질 검증 수단이 없어 전부 스킵한다.
 func decide(_ probe: Probe, input: URL, mode: Mode) -> Decision {
-    if input.deletingPathExtension().lastPathComponent.hasSuffix(outputSuffix) { return .skip("clipress 출력 파일") }
+    if input.deletingPathExtension().lastPathComponent.hasSuffix(outputSuffix) { return .skip("Magic Clip 출력 파일") }
     let known: Set = ["video", "audio", "subtitle", "data", "attachment"]
     if probe.streams.contains(where: { !known.contains($0.codecType ?? "") }) {
         return .skip("알 수 없는 스트림 타입")

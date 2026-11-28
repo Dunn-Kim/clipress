@@ -1,7 +1,7 @@
 import Foundation
 import Synchronization
 import Testing
-@testable import ClipressCore
+@testable import MagicClipCore
 
 /// 실제 ffmpeg·ab-av1로 짧은 클립을 끝까지 처리한다. 도구가 없으면 건너뛴다.
 @Suite(.serialized, .enabled(if: toolsInstalled))
@@ -10,7 +10,7 @@ final class PipelineTests {
     let dir: URL
 
     init() throws {
-        dir = FileManager.default.temporaryDirectory.appending(path: "clipress-test-\(UUID().uuidString)")
+        dir = FileManager.default.temporaryDirectory.appending(path: "magic-clip-test-\(UUID().uuidString)")
         try FileManager.default.createDirectory(at: dir, withIntermediateDirectories: true)
     }
 

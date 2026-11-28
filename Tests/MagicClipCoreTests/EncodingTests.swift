@@ -1,6 +1,6 @@
 import Foundation
 import Testing
-@testable import ClipressCore
+@testable import MagicClipCore
 
 @Test func parsesSearchOutput() {
     let done = """

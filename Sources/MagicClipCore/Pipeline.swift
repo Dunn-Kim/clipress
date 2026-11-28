@@ -31,7 +31,7 @@ public func compress(
     _ input: URL, mode: Mode, tools: Tools, status: @escaping @Sendable (Stage) -> Void
 ) async -> Outcome {
     let fm = FileManager.default
-    let temp = fm.temporaryDirectory.appending(path: "clipress-\(UUID().uuidString)")
+    let temp = fm.temporaryDirectory.appending(path: "magic-clip-\(UUID().uuidString)")
     var part: URL?
     // 실패·취소 시 수십 GB짜리 임시 파일을 남기지 않는다.
     defer {

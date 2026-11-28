@@ -1,4 +1,4 @@
-import ClipressCore
+import MagicClipCore
 import SwiftUI
 import UniformTypeIdentifiers
 

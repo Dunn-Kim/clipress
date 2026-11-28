@@ -1,6 +1,6 @@
 import Foundation
 import Testing
-@testable import ClipressCore
+@testable import MagicClipCore
 
 /// Fixtures/*.json은 실제 ffprobe 출력이다. dv_p5_mkv.json만 ffmpeg로 DV 파일을 만들 수 없어
 /// sdr_mkv.json에 ffprobe 형식의 DOVI configuration record를 덧붙인 것이다.

@@ -1,6 +1,6 @@
 import Foundation
 import Testing
-@testable import ClipressCore
+@testable import MagicClipCore
 
 @Test func rotatedPhoneVideoPassesVerification() throws {
     let original = try fixture("rotated_mp4"), output = try fixture("rotated_out_mp4")

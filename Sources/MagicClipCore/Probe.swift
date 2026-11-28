@@ -1,6 +1,6 @@
 import Foundation
 
-/// `ffprobe -show_format -show_streams -of json` 결과 중 clipress가 쓰는 부분.
+/// `ffprobe -show_format -show_streams -of json` 결과 중 Magic Clip이 쓰는 부분.
 struct Probe: Decodable {
     var streams: [Stream]
     var format: Format

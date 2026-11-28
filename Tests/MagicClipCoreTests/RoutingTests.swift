@@ -1,6 +1,6 @@
 import Foundation
 import Testing
-@testable import ClipressCore
+@testable import MagicClipCore
 
 @Test func sdrMKVIsEncodedAsMKV() throws {
     #expect(decide(try fixture("sdr_mkv"), input: mkv, mode: .max) == .encode(Job(
@@ -30,9 +30,9 @@ import Testing
     #expect(job.output.lastPathComponent == "IMG_0001-pressed.mp4")
 }
 
-@Test func clipressOutputsAreSkipped() throws {
+@Test func ownOutputsAreSkipped() throws {
     #expect(decide(try fixture("sdr_mkv"), input: URL(filePath: "/v/movie-pressed.mkv"), mode: .max)
-        == .skip("clipress 출력 파일"))
+        == .skip("Magic Clip 출력 파일"))
 }
 
 @Test func outputContainerAndName() {

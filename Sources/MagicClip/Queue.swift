@@ -1,4 +1,4 @@
-import ClipressCore
+import MagicClipCore
 import Foundation
 import Observation
 import UniformTypeIdentifiers
@@ -60,7 +60,7 @@ final class Queue {
         running = Task {
             // 몇 시간짜리 인코딩 중에 Mac이 유휴 잠자기로 들어가 큐가 멈추지 않게 한다.
             let activity = ProcessInfo.processInfo.beginActivity(
-                options: [.userInitiated, .idleSystemSleepDisabled], reason: "Clipress 인코딩"
+                options: [.userInitiated, .idleSystemSleepDisabled], reason: "Magic Clip 인코딩"
             )
             defer {
                 ProcessInfo.processInfo.endActivity(activity)

@@ -1,4 +1,4 @@
-# clipress
+# Magic Clip
 
 해상도와 화질(VMAF 기준)을 유지하면서 영상 파일 용량을 줄이는 개인용 macOS 앱.
 
@@ -19,10 +19,10 @@
 ```sh
 brew install ffmpeg
 cargo install ab-av1
-./scripts/bundle.sh && cp -R Clipress.app /Applications/
+./scripts/bundle.sh && cp -R "Magic Clip.app" /Applications/
 ```
 
-앱은 `/opt/homebrew/bin/ffmpeg`, `/opt/homebrew/bin/ffprobe`, `~/.cargo/bin/ab-av1`을 그대로 호출한다. 다른 곳에 설치했다면 `Sources/ClipressCore/Tools.swift`의 경로를 고친다.
+앱은 `/opt/homebrew/bin/ffmpeg`, `/opt/homebrew/bin/ffprobe`, `~/.cargo/bin/ab-av1`을 그대로 호출한다. 다른 곳에 설치했다면 `Sources/MagicClipCore/Tools.swift`의 경로를 고친다.
 
 배포용 바이너리는 없다. 서명·공증하지 않은 개인용 앱이라 직접 빌드해서 쓴다.
 
@@ -52,7 +52,7 @@ cargo install ab-av1
 
 ## 한계
 
-- VMAF 96은 검증된 "눈으로 구분 불가" 기준이 아니다. 자기 콘텐츠로 원본과 비교해 보고 조정할 것 (`Sources/ClipressCore/Encoding.swift`의 `minVMAF`).
+- VMAF 96은 검증된 "눈으로 구분 불가" 기준이 아니다. 자기 콘텐츠로 원본과 비교해 보고 조정할 것 (`Sources/MagicClipCore/Encoding.swift`의 `minVMAF`).
 - HDR·Dolby Vision 파일은 품질 검증 수단이 없어 처리하지 않는다.
 - MOV 입력의 커버 아트는 ffmpeg mov muxer가 쓰지 못해 검증에서 실패하고 원본이 유지된다.
 - 디스크 공간 검사는 파일별이다. 두 파일을 함께 처리하다 공간이 모자라면 한쪽이 실패하고 원본은 그대로 남는다.
@@ -64,11 +64,11 @@ cargo install ab-av1
 ```sh
 export DEVELOPER_DIR=/Applications/Xcode.app/Contents/Developer
 swift test                 # ffmpeg·ab-av1이 있으면 실제 인코딩 테스트도 돈다
-./scripts/bundle.sh        # Clipress.app 생성. 버전은 이 스크립트의 Info.plist에 있다
+./scripts/bundle.sh        # Magic Clip.app 생성. 버전은 이 스크립트의 Info.plist에 있다
 ```
 
 ## 라이선스
 
 [MIT](LICENSE). 저작권 표시와 라이선스 문구만 남기면 상업적 사용·수정·재배포 모두 자유롭다.
 
-clipress는 ffmpeg·ab-av1을 포함하지 않고, 사용자가 설치한 실행 파일을 호출만 한다. 각 도구는 자기 라이선스를 따른다: ab-av1은 MIT, ffmpeg는 빌드 구성에 따라 LGPL 또는 GPL(Homebrew 빌드는 `--enable-gpl --enable-version3`이라 GPLv3). ffmpeg를 앱 안에 넣어 배포하려면 그 라이선스 의무를 따로 지켜야 한다.
+Magic Clip은 ffmpeg·ab-av1을 포함하지 않고, 사용자가 설치한 실행 파일을 호출만 한다. 각 도구는 자기 라이선스를 따른다: ab-av1은 MIT, ffmpeg는 빌드 구성에 따라 LGPL 또는 GPL(Homebrew 빌드는 `--enable-gpl --enable-version3`이라 GPLv3). ffmpeg를 앱 안에 넣어 배포하려면 그 라이선스 의무를 따로 지켜야 한다.

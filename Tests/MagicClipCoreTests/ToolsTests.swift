@@ -1,6 +1,6 @@
 import Foundation
 import Testing
-@testable import ClipressCore
+@testable import MagicClipCore
 
 /// 줄 콜백이 모두 반환 전에 끝나야 "완료" 뒤에 늦은 진행률이 덮어쓰지 않는다.
 @Test func runDeliversEveryLineBeforeReturning() async throws {
