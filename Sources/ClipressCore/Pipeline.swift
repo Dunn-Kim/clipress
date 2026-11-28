@@ -51,31 +51,37 @@ public func compress(
         let free = try input.deletingLastPathComponent()
             .resourceValues(forKeys: [.volumeAvailableCapacityForImportantUsageKey])
             .volumeAvailableCapacityForImportantUsage ?? 0
-        if free < fileSize { return .failed("디스크 공간 부족") }
-        let video = try await tools.videoPackets(input, stream: job.videoIndex)
+        // 결과가 원본의 80%를 넘으면 어차피 버리므로 그만큼만 있으면 된다.
+        if Double(free) < Double(fileSize) * maxSizeRatio { return .failed("디스크 공간 부족") }
+        // 원본 전체를 읽는 패킷 집계는 품질 탐색과 겹쳐 돌린다. 먼저 반환하면 자동으로 취소된다.
+        async let packets = tools.videoPackets(input, stream: job.videoIndex)
 
         status(.searching)
         try fm.createDirectory(at: temp, withIntermediateDirectories: true)
         let quality: Double, videoPercent: Double
         switch try await tools.search(input, mode: mode, gop: job.gop, tempDir: temp) {
         case .found(let q, let percent): (quality, videoPercent) = (q, percent)
-        case .noSuitable: return .skipped("목표 화질을 80% 이하 크기로 낼 수 없음")
+        case .noSuitable: return .skipped("목표 화질을 \(Int(maxSizeRatio * 100))% 이하 크기로 낼 수 없음")
         }
+        let video = try await packets
         let predicted = predictedFileSize(fileSize: fileSize, videoBytes: video.bytes, videoPercent: videoPercent)
         guard passesSizeGate(predicted, original: fileSize) else {
             return .skipped("예상 크기 \(percent(predicted, of: fileSize))%: 절감 부족")
         }
 
-        let partURL = job.output.appendingPathExtension("part")
+        // 이름이 같은 두 입력(a.mkv, a.avi)이 동시에 돌아도 서로의 임시 파일을 덮어쓰지 않게 실행마다 다른 이름을 쓴다.
+        let partURL = job.output.appendingPathExtension("\(UUID().uuidString).part")
         part = partURL
         status(.encoding(EncodeProgress()))
         try await tools.encode(encodeArgs(input: input, output: partURL, job: job, mode: mode, quality: quality),
                                duration: probe.duration ?? 0) { status(.encoding($0)) }
 
         status(.verifying)
-        try await tools.checkDecodes(partURL)
         let result = try await tools.probe(partURL)
+        // 전체 디코드와 패킷 집계는 서로 독립이라 함께 돌린다.
+        async let decodes: Void = tools.checkDecodes(partURL)
         let resultPackets = try await tools.videoPackets(partURL, stream: result.videoStreams.first?.index ?? 0)
+        try await decodes
         if let problem = verify(original: probe, originalVideoPackets: video.count, output: result, outputVideoPackets: resultPackets.count) {
             return .failed("검증 실패: \(problem)")
         }

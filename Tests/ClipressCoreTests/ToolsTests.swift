@@ -51,3 +51,10 @@ import Testing
     #expect(tagged.0 == 8 && tagged.1 == 0)
     #expect(ffmpegVersion("ffmpeg version N-123-gabc") == nil)
 }
+
+@Test func discardedPacketsAreNotCounted() {
+    #expect(packetSize("1234,K__") == 1234)
+    #expect(packetSize("1234,_D_") == nil)
+    #expect(packetSize("1234,KD_") == nil)
+    #expect(packetSize("") == nil)
+}

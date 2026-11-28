@@ -27,8 +27,8 @@ public struct Tools: Sendable {
     /// 디코드 없이 패킷만 읽어 비디오 스트림 바이트 수와 프레임(패킷) 수를 센다.
     func videoPackets(_ url: URL, stream: Int) async throws -> (bytes: Int64, count: Int) {
         var bytes: Int64 = 0, count = 0
-        try await run(ffprobe, ["-v", "error", "-select_streams", "\(stream)", "-show_entries", "packet=size", "-of", "csv=p=0", url.path]) { line in
-            guard let size = Int64(line.prefix { $0.isNumber }) else { return }
+        try await run(ffprobe, ["-v", "error", "-select_streams", "\(stream)", "-show_entries", "packet=size,flags", "-of", "csv=p=0", url.path]) { line in
+            guard let size = packetSize(line) else { return }
             bytes += size
             count += 1
         }
@@ -80,6 +80,14 @@ extension EncodeProgress {
         }
         return false
     }
+}
+
+/// ffprobe `packet=size,flags` 한 줄("1234,K__")의 크기. 숫자가 아닌 줄과 버려지는 패킷은 nil.
+/// D(discard) 패킷은 MP4 편집 목록 밖(음수 시각)이라 디코더가 내보내지 않는다. 세면 결과와 프레임 수가 어긋난다.
+func packetSize(_ line: String) -> Int64? {
+    let fields = line.split(separator: ",", omittingEmptySubsequences: false)
+    guard fields.count > 1, !fields[1].contains("D") else { return nil }
+    return Int64(fields[0])
 }
 
 func ffmpegVersion(_ text: String) -> (Int, Int)? {

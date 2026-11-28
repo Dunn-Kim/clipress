@@ -18,8 +18,12 @@ func searchArgs(input: URL, mode: Mode, gop: Int, tempDir: URL) -> [String] {
     var args = [
         "crf-search", "-i", input.path,
         "--min-vmaf", minVMAF,
-        "--sample-every", "6m",
+        // 비디오 스트림이 이 비율을 넘으면 파일 전체도 기준을 넘는다. ab-av1 기본값(80)에 기대지 않고 같은 상수를 넘긴다.
+        "--max-encoded-percent", "\(Int(maxSizeRatio * 100))",
+        "--sample-every", "12m",
         "--crf-increment", "1",
+        // VMAF를 4프레임마다 계산한다. 1080p 53분 파일 실측: 탐색 297초 → 165초, 고른 품질값 동일, VMAF 차이 0.02.
+        "--vmaf", "n_subsample=4",
         "--keyint", "\(gop)",
         "--temp-dir", tempDir.path,
         "--stdout-format", "json",
