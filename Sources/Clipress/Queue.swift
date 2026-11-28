@@ -1,8 +1,12 @@
 import ClipressCore
 import Foundation
 import Observation
+import UniformTypeIdentifiers
 
-/// 끌어다 놓은 파일 목록과 순차 처리 상태.
+/// 압축에 성공하면 원본을 휴지통으로 옮길지(기본 켬). ContentView의 토글이 같은 키를 쓴다.
+let trashOriginalKey = "trashOriginal"
+
+/// 끌어다 놓은 파일 목록과 처리 상태.
 @MainActor @Observable
 final class Queue {
     struct Item: Identifiable {
@@ -24,18 +28,32 @@ final class Queue {
     var pendingCount: Int { items.count(where: \.pending) }
     var finishedCount: Int { items.count { $0.summary != nil } }
 
-    /// (끝난 파일 수 + 지금 인코딩 중인 파일의 진행률) ÷ 전체 파일 수.
+    /// (끝난 파일 수 + 지금 인코딩 중인 파일들의 진행률 합) ÷ 전체 파일 수.
     var overallFraction: Double {
         guard !items.isEmpty else { return 0 }
-        let current = items.lazy.compactMap { item -> Double? in
-            if case .encoding(let progress) = item.stage { progress.fraction } else { nil }
-        }.first ?? 0
+        let current = items.reduce(0.0) { sum, item in
+            if case .encoding(let progress) = item.stage { sum + progress.fraction } else { sum }
+        }
         return (Double(finishedCount) + current) / Double(items.count)
     }
 
-    /// 대기 중인 항목만 중복으로 본다. 끝난(취소·실패 포함) 파일은 다시 넣어 재시도할 수 있다.
+    /// 대기·처리 중인 항목만 중복으로 본다. 끝난(취소·실패 포함) 파일은 다시 넣어 재시도할 수 있다.
+    /// 폴더는 안에 든 영상 파일(하위 폴더 포함)로 펼친다.
     func add(_ urls: [URL]) {
-        items += urls.filter { url in !items.contains { $0.pending && $0.url == url } }.map { Item(url: $0) }
+        for url in urls.flatMap(videoFiles) where !items.contains(where: { $0.summary == nil && $0.url == url }) {
+            items.append(Item(url: url))
+        }
+    }
+
+    private func videoFiles(_ url: URL) -> [URL] {
+        guard (try? url.resourceValues(forKeys: [.isDirectoryKey]))?.isDirectory == true else { return [url] }
+        let files = FileManager.default.enumerator(
+            at: url, includingPropertiesForKeys: [.contentTypeKey], options: [.skipsHiddenFiles, .skipsPackageDescendants]
+        )?.allObjects as? [URL] ?? []
+        return files.filter { file in
+            guard let type = (try? file.resourceValues(forKeys: [.contentTypeKey]))?.contentType else { return false }
+            return videoTypes.contains { type.conforms(to: $0) }
+        }.sorted { $0.path < $1.path }
     }
 
     func start() {
@@ -48,21 +66,39 @@ final class Queue {
                 ProcessInfo.processInfo.endActivity(activity)
                 running = nil
             }
-            while !Task.isCancelled, let index = items.firstIndex(where: \.pending) {
-                items[index].pending = false
-                let id = items[index].id
-                let outcome = await compress(items[index].url, mode: mode, tools: tools) { stage in
-                    DispatchQueue.main.async { MainActor.assumeIsolated { self.update(id) { $0.stage = stage } } }
-                }
-                update(id) {
-                    $0.stage = nil
-                    $0.summary = outcome.summary
-                }
+            // 빠름 모드의 하드웨어 인코딩은 CPU를 1코어쯤만 써서 두 파일을 함께 돌린다
+            // (M3 Pro 실측: 인코딩 2개 동시 = 처리량 1.31배, 한쪽이 탐색·검증이면 남는 코어를 쓴다).
+            // SVT-AV1은 혼자서 모든 코어를 쓰므로 하나씩 한다.
+            let mode = mode
+            await withTaskGroup(of: Void.self) { group in
+                for _ in 0..<(mode == .fast ? 2 : 1) { group.addTask { await self.work(mode) } }
+            }
+        }
+    }
+
+    private func work(_ mode: Mode) async {
+        while !Task.isCancelled, let index = items.firstIndex(where: \.pending) {
+            items[index].pending = false
+            let (id, url) = (items[index].id, items[index].url)
+            let outcome = await compress(url, mode: mode, tools: tools) { stage in
+                DispatchQueue.main.async { MainActor.assumeIsolated { self.update(id) { $0.stage = stage } } }
+            }
+            var summary = outcome.summary
+            if case .done = outcome, UserDefaults.standard.object(forKey: trashOriginalKey) as? Bool ?? true {
+                let trashed = (try? FileManager.default.trashItem(at: url, resultingItemURL: nil)) != nil
+                summary += trashed ? ", 원본은 휴지통으로" : ", 원본 휴지통 이동 실패"
+            }
+            update(id) {
+                $0.stage = nil
+                $0.summary = summary
             }
         }
     }
 
     func cancel() { running?.cancel() }
+
+    /// 끝난(완료·스킵·실패) 기록을 목록에서 지운다. 파일은 건드리지 않는다.
+    func clearFinished() { items.removeAll { $0.summary != nil } }
 
     private func update(_ id: UUID, _ change: (inout Item) -> Void) {
         guard let index = items.firstIndex(where: { $0.id == id }) else { return }

@@ -3,13 +3,14 @@ import SwiftUI
 import UniformTypeIdentifiers
 
 /// 파일 선택 창에서 고를 수 있는 형식. 실제 처리 여부는 ffprobe 분석이 정한다.
-private let videoTypes: [UTType] = [.movie, .video, .avi, .mpeg2TransportStream]
+let videoTypes: [UTType] = [.movie, .video, .avi, .mpeg2TransportStream]
     + ["mkv", "webm", "flv", "wmv"].compactMap { UTType(filenameExtension: $0) }
 
 struct ContentView: View {
     @State private var queue = Queue()
     @State private var showLossNote = false
     @State private var importing = false
+    @AppStorage(trashOriginalKey) private var trashOriginal = true
 
     var body: some View {
         VStack(alignment: .leading, spacing: 12) {
@@ -63,9 +64,10 @@ struct ContentView: View {
                 }
 
             HStack {
-                Text("원본은 그대로 두고 옆에 이름-pressed.확장자로 저장합니다.")
-                    .foregroundStyle(.secondary)
+                Toggle("성공하면 원본을 휴지통으로", isOn: $trashOriginal)
                 Spacer()
+                Button("기록 지우기") { queue.clearFinished() }
+                    .disabled(queue.finishedCount == 0)
                 Button("파일 추가…") { importing = true }
                     .keyboardShortcut("o")
                 if queue.running == nil {
